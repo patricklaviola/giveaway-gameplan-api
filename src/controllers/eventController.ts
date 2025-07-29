@@ -16,6 +16,7 @@ const columns = [
   'time_and_zone',
   'location',
   'offer_url',
+  'day_of_week',
 ];
 
 export const getEventById = async (req: Request, res: Response, next: NextFunction) => {
@@ -43,24 +44,86 @@ export const getEventById = async (req: Request, res: Response, next: NextFuncti
   //      console.warn(`GET /events/${id} - Not found`);
 };
 
+// const dayOfWeekToNumber = (dow: string): number => {
+//   const mapping: Record<string, number> = {
+//     sunday: 0,
+//     monday: 1,
+//     tuesday: 2,
+//     wednesday: 3,
+//     thursday: 4,
+//     friday: 5,
+//     saturday: 6,
+//   };
+//   return mapping[dow.toLowerCase()] ?? -1;
+// };
+
+// export const getAllEvents = async (req: Request, res: Response, next: NextFunction) => {
+//   try {
+//     const { rows }: QueryResult<Event> = await pool.query('SELECT * FROM events;');
+//     if (!Array.isArray(rows)) {
+//       res.status(500).json({ error: 'Failed to retrieve events' });
+//       return;
+//     }
+//     res.status(200).json(rows);
+//   } catch (err) {
+//     next(err);
+//   }
+// };
+
 export const getAllEvents = async (req: Request, res: Response, next: NextFunction) => {
+  const { league, team, date, dow } = req.query as {
+    league?: string;
+    team?: string;
+    date?: string;
+    dow?: string;
+  };
+
+  if (date && dow) {
+    res.status(400).json({ error: 'Use either date or day of the week, not both' });
+    return;
+  }
+
   try {
-    const { rows }: QueryResult<Event> = await pool.query('SELECT * FROM events;');
+    const filters: string[] = [];
+    const values: string[] = [];
+
+    if (league) {
+      filters.push(`league = $${values.length + 1}`);
+      values.push(league);
+    }
+
+    if (team) {
+      filters.push(`team_name = $${values.length + 1}`);
+      values.push(team);
+    }
+
+    if (date) {
+      filters.push(`start_date = $${values.length + 1}`);
+      values.push(date);
+    }
+
+    if (dow) {
+      filters.push(`day_of_week = $${values.length + 1}`);
+      values.push(dow);
+    }
+
+    const whereClause = filters.length > 0 ? `WHERE ${filters.join(' AND ')}` : '';
+    const query = `SELECT * FROM events ${whereClause} ORDER BY start_date ASC;`;
+
+    const { rows }: QueryResult<Event> = await pool.query(query, values);
+
     if (!Array.isArray(rows)) {
       res.status(500).json({ error: 'Failed to retrieve events' });
       return;
     }
+
     res.status(200).json(rows);
   } catch (err) {
     next(err);
   }
-
-  // optional improvements:
-  // add LIMIT and OFFSET query params
-  // logging: log the number of events returned in debug mode
-  // schema validation (with Zod or Joi). If your DB ever changes and returns unexpected types, validating at the API layer helps prevent silent data issues.
 };
 
+// consider something like EXTRACT(DOW FROM start_date) instead of having the scraper do it?
 export const createEvent = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const {
@@ -75,6 +138,7 @@ export const createEvent = async (req: Request, res: Response, next: NextFunctio
       timeAndZone,
       location,
       offerURL,
+      dayOfWeek,
     } = req.body as Event;
 
     // move to middleware if needed
@@ -89,7 +153,8 @@ export const createEvent = async (req: Request, res: Response, next: NextFunctio
       !description ||
       !timeAndZone ||
       !location ||
-      !offerURL
+      !offerURL ||
+      !dayOfWeek
     ) {
       res.status(400).json({ error: 'Missing required event fields' });
       return;
@@ -98,7 +163,7 @@ export const createEvent = async (req: Request, res: Response, next: NextFunctio
     const { rows }: QueryResult<Event> = await pool.query(
       `
       INSERT INTO events (${columns.join(', ')})
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
       RETURNING *;
       `,
       [
@@ -113,6 +178,7 @@ export const createEvent = async (req: Request, res: Response, next: NextFunctio
         timeAndZone,
         location,
         offerURL,
+        dayOfWeek,
       ],
     );
 
@@ -131,6 +197,7 @@ export const createEvent = async (req: Request, res: Response, next: NextFunctio
   // Trim strings or sanitize inputs before inserting to avoid junk data.
 };
 
+// consider something like EXTRACT(DOW FROM start_date) instead of having the scraper do it?
 export const createManyEvents = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const events: Event[] = req.body;
@@ -160,6 +227,7 @@ export const createManyEvents = async (req: Request, res: Response, next: NextFu
         event.timeAndZone,
         event.location,
         event.offerURL,
+        event.dayOfWeek,
       );
     });
 

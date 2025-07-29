@@ -11,6 +11,7 @@ export type Event = {
   timeAndZone: string;
   location: string;
   offerURL: string;
+  dayOfWeek: string;
   createdAt?: string; // ISO 8601 string (TIMESTAMPTZ)
   updatedAt?: string;
 };

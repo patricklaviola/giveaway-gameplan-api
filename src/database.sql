@@ -11,8 +11,9 @@ CREATE TABLE events(
     end_date DATE NOT NULL,
     description TEXT,
     time_and_zone TEXT,
-    location TEXT,
-    offer_url TEXT,
+    location TEXT NOT NULL,
+    offer_url TEXT NOT NULL,
+    day_of_week TEXT NOT NULL,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );

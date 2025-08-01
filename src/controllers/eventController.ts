@@ -44,19 +44,6 @@ export const getEventById = async (req: Request, res: Response, next: NextFuncti
   //      console.warn(`GET /events/${id} - Not found`);
 };
 
-// const dayOfWeekToNumber = (dow: string): number => {
-//   const mapping: Record<string, number> = {
-//     sunday: 0,
-//     monday: 1,
-//     tuesday: 2,
-//     wednesday: 3,
-//     thursday: 4,
-//     friday: 5,
-//     saturday: 6,
-//   };
-//   return mapping[dow.toLowerCase()] ?? -1;
-// };
-
 // export const getAllEvents = async (req: Request, res: Response, next: NextFunction) => {
 //   try {
 //     const { rows }: QueryResult<Event> = await pool.query('SELECT * FROM events;');
